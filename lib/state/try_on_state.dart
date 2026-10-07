@@ -16,6 +16,7 @@ class TryOnState {
   void setModelImage(String image) {
     modelImage = image;
     generatedOutputs.clear();
+    fallbackMode = false;
   }
 
   void selectGarment(Garment garment) {
@@ -24,6 +25,10 @@ class TryOnState {
 
   void addOutput(String output) {
     generatedOutputs.add(output);
+  }
+
+  void setFallbackMode(bool value) {
+    fallbackMode = value;
   }
 
   void reset() {
