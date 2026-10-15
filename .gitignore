@@ -1,3 +1,6 @@
-﻿.env
-node_modules/
-output_result.png
+.venv/
+__pycache__/
+*.pyc
+.env
+uploads/
+generated/
