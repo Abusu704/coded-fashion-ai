@@ -169,6 +169,7 @@ app.post(
   upload.single("productImage"),
   async (req, res) => {
     try {
+            console.log("[campaign] Request received:", new Date().toISOString());
       const { brandName, productName, price, prompt } = req.body;
 
       if (!req.file) {
@@ -232,6 +233,7 @@ Rules:
       let campaign;
 
       try {
+                console.log("[campaign] Calling Gemini: gemini-3.8-flash");
         const result = await ai.models.generateContent({
           model: "gemini-3.8-flash",
           contents: instructions,
@@ -256,6 +258,7 @@ Rules:
         });
 
         campaign = JSON.parse(result.text);
+                console.log("[campaign] Gemini response received successfully");
       } catch (aiError) {
         console.error("Gemini API call failed:", aiError.message);
 
