@@ -50,7 +50,7 @@ Create a local environment file:
 touch .env
 ```
 
-Add your own Gemini API key to `backend/.env`, using the exact variable name expected by `backend/server.js`.
+Add your own Gemini API key to `backend/.env`, using this exact variable name: `GEMINI_API_KEY`.
 
 Never upload your `.env` file or share your API key publicly.
 
