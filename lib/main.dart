@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -21,9 +21,7 @@ class CampaignApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Fashion Campaign Studio',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF315C35),
-        ),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF315C35)),
         useMaterial3: true,
         scaffoldBackgroundColor: const Color(0xFFF7F7F2),
       ),
@@ -74,9 +72,7 @@ class _CampaignFormScreenState extends State<CampaignFormScreen> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not select the image.'),
-        ),
+        const SnackBar(content: Text('Could not select the image.')),
       );
     }
   }
@@ -89,9 +85,7 @@ class _CampaignFormScreenState extends State<CampaignFormScreen> {
         _promptController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Add a photo, brand, product and campaign prompt.',
-          ),
+          content: Text('Add a photo, brand, product and campaign prompt.'),
         ),
       );
       return;
@@ -107,7 +101,9 @@ class _CampaignFormScreenState extends State<CampaignFormScreen> {
     try {
       final request = http.MultipartRequest(
         'POST',
-        Uri.parse('http://localhost:5001/api/campaign'),
+        Uri.parse(
+          'http://${Platform.isAndroid ? '172.31.245.137' : 'localhost'}:5001/api/campaign',
+        ),
       );
 
       request.fields.addAll({
@@ -128,8 +124,8 @@ class _CampaignFormScreenState extends State<CampaignFormScreen> {
       );
 
       final streamedResponse = await request.send().timeout(
-            const Duration(seconds: 120),
-          );
+        const Duration(seconds: 120),
+      );
 
       final response = await http.Response.fromStream(streamedResponse);
       final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -189,9 +185,9 @@ class _CampaignFormScreenState extends State<CampaignFormScreen> {
   }
 
   void _showSnack(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -210,26 +206,21 @@ class _CampaignFormScreenState extends State<CampaignFormScreen> {
         title: const Text('Fashion Campaign Studio'),
         backgroundColor: const Color(0xFFF7F7F2),
       ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 680),
-          child: ListView(
-            padding: const EdgeInsets.all(20),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isDesktop = constraints.maxWidth >= 900;
+
+          final formSection = Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Text(
                 'Create your next campaign',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               Text(
                 'Turn your product details into an Instagram-ready promotion.',
-                style: TextStyle(
-                  color: Colors.grey.shade700,
-                  fontSize: 15,
-                ),
+                style: TextStyle(color: Colors.grey.shade700, fontSize: 15),
               ),
               const SizedBox(height: 24),
               InkWell(
@@ -340,82 +331,155 @@ class _CampaignFormScreenState extends State<CampaignFormScreen> {
                   ),
                 ),
               ],
-              if (_campaign != null) ...[
-                const SizedBox(height: 28),
-                const Text(
-                  'Your promotional poster',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                if (_posterBytes != null) ...[
-                  Card(
-                    clipBehavior: Clip.antiAlias,
-                    elevation: 2,
-                    child: Image.memory(
-                      _posterBytes!,
-                      width: double.infinity,
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 50,
-                    child: FilledButton.icon(
-                      onPressed: _downloadPoster,
-                      icon: const Icon(Icons.download),
-                      label: const Text('Download Poster PNG'),
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: () => _copyText(
-                    'Campaign: ${_campaign?['campaignTitle'] ?? ''}\n\n${_campaign?['caption'] ?? ''}',
-                  ),
-                  icon: const Icon(Icons.copy),
-                  label: const Text('Copy campaign text'),
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  'Your campaign',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _resultCard(
-                  title: 'Campaign title',
-                  content: _campaign!['campaignTitle']?.toString() ?? '',
-                ),
-                _resultCard(
-                  title: 'Instagram caption',
-                  content: _campaign!['caption']?.toString() ?? '',
-                ),
-                _resultCard(
-                  title: 'Call to action',
-                  content: _campaign!['callToAction']?.toString() ?? '',
-                ),
-                _resultCard(
-                  title: 'Promotional image direction',
-                  content: _campaign!['visualDirection']?.toString() ?? '',
-                ),
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: () => _copyText(
-                    _campaign!['caption']?.toString() ?? '',
-                  ),
-                  icon: const Icon(Icons.copy),
-                  label: const Text('Copy Instagram caption'),
-                ),
-              ],
-              const SizedBox(height: 30),
             ],
-          ),
-        ),
+          );
+
+          final resultsSection = _campaign != null
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text(
+                      'Your promotional poster',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (_posterBytes != null) ...[
+                      Card(
+                        clipBehavior: Clip.antiAlias,
+                        elevation: 2,
+                        child: Image.memory(
+                          _posterBytes!,
+                          width: double.infinity,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 50,
+                        child: FilledButton.icon(
+                          onPressed: _downloadPoster,
+                          icon: const Icon(Icons.download),
+                          label: const Text('Download Poster PNG'),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: () => _copyText(
+                        'Campaign: ${_campaign?['campaignTitle'] ?? ''}\n\n${_campaign?['caption'] ?? ''}',
+                      ),
+                      icon: const Icon(Icons.copy),
+                      label: const Text('Copy campaign text'),
+                    ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Your campaign',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _resultCard(
+                      title: 'Campaign title',
+                      content: _campaign!['campaignTitle']?.toString() ?? '',
+                    ),
+                    _resultCard(
+                      title: 'Instagram caption',
+                      content: _campaign!['caption']?.toString() ?? '',
+                    ),
+                    _resultCard(
+                      title: 'Call to action',
+                      content: _campaign!['callToAction']?.toString() ?? '',
+                    ),
+                    _resultCard(
+                      title: 'Promotional image direction',
+                      content: _campaign!['visualDirection']?.toString() ?? '',
+                    ),
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      onPressed: () =>
+                          _copyText(_campaign!['caption']?.toString() ?? ''),
+                      icon: const Icon(Icons.copy),
+                      label: const Text('Copy Instagram caption'),
+                    ),
+                  ],
+                )
+              : Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 48,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFD8DDCF)),
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(
+                        Icons.auto_awesome_mosaic_outlined,
+                        size: 52,
+                        color: Color(0xFF315C35),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Your results will appear here',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 19,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Complete the form to see your promotional poster and campaign content.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.grey.shade700,
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1400),
+              child: SingleChildScrollView(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isDesktop ? 32 : 20,
+                  vertical: 24,
+                ),
+                child: isDesktop
+                    ? Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(flex: 5, child: formSection),
+                          const SizedBox(width: 32),
+                          Expanded(flex: 6, child: resultsSection),
+                        ],
+                      )
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          formSection,
+                          if (_campaign != null) ...[
+                            const SizedBox(height: 36),
+                            resultsSection,
+                          ],
+                          const SizedBox(height: 30),
+                        ],
+                      ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -436,18 +500,13 @@ class _CampaignFormScreenState extends State<CampaignFormScreen> {
           hintText: hint,
           filled: true,
           fillColor: Colors.white,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
     );
   }
 
-  Widget _resultCard({
-    required String title,
-    required String content,
-  }) {
+  Widget _resultCard({required String title, required String content}) {
     return Card(
       color: Colors.white,
       margin: const EdgeInsets.only(bottom: 12),
@@ -458,10 +517,7 @@ class _CampaignFormScreenState extends State<CampaignFormScreen> {
           children: [
             Text(
               title,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             const SizedBox(height: 8),
             SelectableText(content),
