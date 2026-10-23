@@ -223,7 +223,7 @@ Rules:
 - Keep campaignTitle concise enough for a promotional poster.
 `;
 
-      const models = ["gemini-3.8-flash", "gemini-2.5-flash"];
+      const models = ["gemini-3.8-flash", "gemini-3.5-flash-lite"];
       let campaign;
       const aiTimeoutMs = 45000;
 
