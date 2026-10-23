@@ -230,42 +230,58 @@ Rules:
 - Keep campaignTitle concise enough for a promotional poster.
 `;
 
+
       let campaign;
+      const models = ["gemini-3.8-flash", "gemini-2.5-flash"];
+      let lastAiError;
 
-      try {
-                console.log("[campaign] Calling Gemini: gemini-3.8-flash");
-        const result = await ai.models.generateContent({
-          model: "gemini-3.8-flash",
-          contents: instructions,
-          config: {
-            responseMimeType: "application/json",
-            responseSchema: {
-              type: Type.OBJECT,
-              properties: {
-                campaignTitle: { type: Type.STRING },
-                caption: { type: Type.STRING },
-                callToAction: { type: Type.STRING },
-                visualDirection: { type: Type.STRING },
+      for (const model of models) {
+        try {
+          console.log(`[campaign] Trying model: ${model}`);
+
+          const result = await ai.models.generateContent({
+            model,
+            contents: instructions,
+            config: {
+              responseMimeType: "application/json",
+              responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                  campaignTitle: { type: Type.STRING },
+                  caption: { type: Type.STRING },
+                  callToAction: { type: Type.STRING },
+                  visualDirection: { type: Type.STRING },
+                },
+                required: [
+                  "campaignTitle",
+                  "caption",
+                  "callToAction",
+                  "visualDirection",
+                ],
               },
-              required: [
-                "campaignTitle",
-                "caption",
-                "callToAction",
-                "visualDirection",
-              ],
             },
-          },
-        });
+          });
 
-        campaign = JSON.parse(result.text);
-                console.log("[campaign] Gemini response received successfully");
-      } catch (aiError) {
-        console.error("Gemini API call failed:", aiError.message);
+          campaign = JSON.parse(result.text);
+          console.log(`[campaign] Success with model: ${model}`);
+          lastAiError = null;
+          break;
+        } catch (aiError) {
+          lastAiError = aiError;
+          console.error(
+            `[campaign] Model ${model} failed:`,
+            aiError.message
+          );
+        }
+      }
 
+      if (!campaign) {
         return res.status(502).json({
-          error: "AI generation service unavailable. Please try again.",
+          error:
+            "Campaign generation is temporarily unavailable. Please try again shortly.",
         });
       }
+
 
       let poster;
 
