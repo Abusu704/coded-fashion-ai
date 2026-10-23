@@ -99,12 +99,16 @@ class _CampaignFormScreenState extends State<CampaignFormScreen> {
     });
 
     try {
-      final request = http.MultipartRequest(
-        'POST',
-        Uri.parse(
-          'http://${Platform.isAndroid ? '172.31.245.137' : 'localhost'}:5001/api/campaign',
-        ),
-      );
+     const apiBaseUrl = String.fromEnvironment('API_BASE_URL');
+
+final apiUrl = apiBaseUrl.isNotEmpty
+    ? '$apiBaseUrl/api/campaign'
+    : 'http://${Platform.isAndroid ? '172.31.245.137' : 'localhost'}:5001/api/campaign';
+
+final request = http.MultipartRequest(
+  'POST',
+  Uri.parse(apiUrl),
+);
 
       request.fields.addAll({
         'brandName': _brandController.text.trim(),
