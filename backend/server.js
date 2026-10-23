@@ -1,3 +1,4 @@
+
 require("dotenv").config();
 
 const express = require("express");
@@ -52,23 +53,15 @@ async function createPoster(photo, campaign, brand, product, price) {
     <svg width="1080" height="1080"
          xmlns="http://www.w3.org/2000/svg">
       <rect width="1080" height="1080" fill="#F7F4EC"/>
-
       <rect x="24" y="24" width="1032" height="1032" rx="28"
             fill="none" stroke="#315C35" stroke-width="2"/>
-
       <circle cx="1000" cy="95" r="90" fill="#E9E2D2"/>
       <circle cx="1000" cy="95" r="56" fill="#F7F4EC"/>
-
-      <path d="M70 160 H1010"
-            stroke="#D8C49B" stroke-width="2"/>
-
+      <path d="M70 160 H1010" stroke="#D8C49B" stroke-width="2"/>
       <rect x="55" y="180" width="970" height="615" rx="24"
-            fill="#FFFFFF"
-            stroke="#E5DDCE" stroke-width="2"/>
-
+            fill="#FFFFFF" stroke="#E5DDCE" stroke-width="2"/>
       <rect x="55" y="810" width="970" height="220" rx="22"
             fill="#23452B"/>
-
       <rect x="80" y="830" width="5" height="180" rx="2"
             fill="#C7A66A"/>
     </svg>
@@ -87,13 +80,10 @@ async function createPoster(photo, campaign, brand, product, price) {
     ? `
       <rect x="755" y="837" width="230" height="112" rx="18"
             fill="#F7F4EC"/>
-
       <text x="870" y="872" text-anchor="middle"
             font-family="DejaVu Sans, sans-serif"
-            font-size="15" font-weight="bold"
-            letter-spacing="2"
+            font-size="15" font-weight="bold" letter-spacing="2"
             fill="#655F52">PRICE</text>
-
       <text x="870" y="920" text-anchor="middle"
             font-family="DejaVu Sans, sans-serif"
             font-size="32" font-weight="bold"
@@ -104,42 +94,32 @@ async function createPoster(photo, campaign, brand, product, price) {
   const overlay = Buffer.from(`
     <svg width="1080" height="1080"
          xmlns="http://www.w3.org/2000/svg">
-
       <text x="540" y="66" text-anchor="middle"
             font-family="DejaVu Sans, sans-serif"
             font-size="17" letter-spacing="5"
             fill="#8A7856">THE STYLE EDIT</text>
-
       <text x="540" y="115" text-anchor="middle"
             font-family="DejaVu Sans, sans-serif"
             font-size="34" font-weight="bold"
             fill="#23452B">${safeBrand}</text>
-
       <text x="540" y="148" text-anchor="middle"
             font-family="DejaVu Sans, sans-serif"
-            font-size="19"
-            fill="#655F52">${safeProduct}</text>
-
+            font-size="19" fill="#655F52">${safeProduct}</text>
       <text x="105" y="850"
             font-family="DejaVu Sans, sans-serif"
             font-size="14" letter-spacing="2"
             fill="#D8C49B">NEW SEASON • NEW STYLE</text>
-
       <text x="105" y="899"
             font-family="DejaVu Sans, sans-serif"
             font-size="28" font-weight="bold"
             fill="#FFFFFF">${safeTitle}</text>
-
       ${priceMarkup}
-
       <rect x="105" y="934" width="390" height="52" rx="26"
             fill="#F7F4EC"/>
-
       <text x="300" y="966" text-anchor="middle"
             font-family="DejaVu Sans, sans-serif"
             font-size="14" font-weight="bold"
             fill="#23452B">${safeCta}</text>
-
       <text x="980" y="1000" text-anchor="end"
             font-family="DejaVu Sans, sans-serif"
             font-size="12" letter-spacing="1"
@@ -164,12 +144,29 @@ async function createPoster(photo, campaign, brand, product, price) {
     .toBuffer();
 }
 
+function withTimeout(promise, milliseconds, label) {
+  let timer;
+
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error(`${label} timed out after ${milliseconds / 1000}s`));
+    }, milliseconds);
+  });
+
+  return Promise.race([promise, timeout]).finally(() => {
+    clearTimeout(timer);
+  });
+}
+
 app.post(
   "/api/campaign",
   upload.single("productImage"),
   async (req, res) => {
+    const startedAt = Date.now();
+
     try {
-            console.log("[campaign] Request received:", new Date().toISOString());
+      console.log("[campaign] Request received:", new Date().toISOString());
+
       const { brandName, productName, price, prompt } = req.body;
 
       if (!req.file) {
@@ -180,8 +177,7 @@ app.post(
 
       if (!brandName?.trim() || !productName?.trim() || !prompt?.trim()) {
         return res.status(400).json({
-          error:
-            "Brand name, product name and campaign prompt are required.",
+          error: "Brand name, product name and campaign prompt are required.",
         });
       }
 
@@ -198,17 +194,14 @@ app.post(
           failOn: "error",
         }).metadata();
       } catch (imageError) {
-        console.error("Invalid uploaded image:", imageError.message);
+        console.error("[campaign] Invalid uploaded image:", imageError.message);
 
         return res.status(415).json({
-          error:
-            "The uploaded file is not a valid image. Please choose a JPEG, PNG or WebP photo.",
+          error: "The uploaded file is not a valid image. Please choose a JPEG, PNG or WebP photo.",
         });
       }
 
-      const allowedFormats = ["jpeg", "png", "webp"];
-
-      if (!allowedFormats.includes(imageMetadata.format)) {
+      if (!["jpeg", "png", "webp"].includes(imageMetadata.format)) {
         return res.status(415).json({
           error: "Only JPEG, PNG and WebP images are supported.",
         });
@@ -230,44 +223,50 @@ Rules:
 - Keep campaignTitle concise enough for a promotional poster.
 `;
 
-
-      let campaign;
       const models = ["gemini-3.8-flash", "gemini-2.5-flash"];
-      let lastAiError;
+      let campaign;
+      const aiTimeoutMs = 45000;
 
       for (const model of models) {
         try {
           console.log(`[campaign] Trying model: ${model}`);
 
-          const result = await ai.models.generateContent({
-            model,
-            contents: instructions,
-            config: {
-              responseMimeType: "application/json",
-              responseSchema: {
-                type: Type.OBJECT,
-                properties: {
-                  campaignTitle: { type: Type.STRING },
-                  caption: { type: Type.STRING },
-                  callToAction: { type: Type.STRING },
-                  visualDirection: { type: Type.STRING },
+          const result = await withTimeout(
+            ai.models.generateContent({
+              model,
+              contents: instructions,
+              config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                  type: Type.OBJECT,
+                  properties: {
+                    campaignTitle: { type: Type.STRING },
+                    caption: { type: Type.STRING },
+                    callToAction: { type: Type.STRING },
+                    visualDirection: { type: Type.STRING },
+                  },
+                  required: [
+                    "campaignTitle",
+                    "caption",
+                    "callToAction",
+                    "visualDirection",
+                  ],
                 },
-                required: [
-                  "campaignTitle",
-                  "caption",
-                  "callToAction",
-                  "visualDirection",
-                ],
               },
-            },
-          });
+            }),
+            aiTimeoutMs,
+            model
+          );
+
+          if (!result.text) {
+            throw new Error(`${model} returned an empty response`);
+          }
 
           campaign = JSON.parse(result.text);
+
           console.log(`[campaign] Success with model: ${model}`);
-          lastAiError = null;
           break;
         } catch (aiError) {
-          lastAiError = aiError;
           console.error(
             `[campaign] Model ${model} failed:`,
             aiError.message
@@ -277,49 +276,64 @@ Rules:
 
       if (!campaign) {
         return res.status(502).json({
-          error:
-            "Campaign generation is temporarily unavailable. Please try again shortly.",
+          error: "Campaign generation is temporarily unavailable. Please try again shortly.",
         });
       }
 
+      console.log("[campaign] Starting poster rendering");
 
       let poster;
 
       try {
-        poster = await createPoster(
-          req.file.buffer,
-          campaign,
-          brandName.trim(),
-          productName.trim(),
-          price?.trim() || ""
+        poster = await withTimeout(
+          createPoster(
+            req.file.buffer,
+            campaign,
+            brandName.trim(),
+            productName.trim(),
+            price?.trim() || ""
+          ),
+          20000,
+          "Poster rendering"
         );
+
+        console.log("[campaign] Poster rendered successfully");
       } catch (posterError) {
-        console.error("Poster rendering failed:", posterError.message);
+        console.error("[campaign] Poster rendering failed:", posterError.message);
 
         return res.status(422).json({
-          error:
-            "Could not render poster. Please ensure the uploaded photo is a valid image.",
+          error: "Could not render poster. Please try a different product photo.",
         });
       }
+
+      const posterBase64 = poster.toString("base64");
+
+      console.log("[campaign] Sending completed campaign response");
 
       return res.json({
         success: true,
         campaign,
-        posterBase64: poster.toString("base64"),
+        posterBase64,
         posterMimeType: "image/png",
       });
     } catch (error) {
-      console.error("Campaign endpoint error:", error.message);
+      console.error("[campaign] Endpoint error:", error.message);
 
-      return res.status(500).json({
-        error: "Internal server error occurred while generating campaign.",
-      });
+      if (!res.headersSent) {
+        return res.status(500).json({
+          error: "An unexpected error occurred while generating the campaign.",
+        });
+      }
+    } finally {
+      console.log(
+        `[campaign] Request finished after ${((Date.now() - startedAt) / 1000).toFixed(1)}s`
+      );
     }
   }
 );
 
 app.use((error, req, res, _next) => {
-  console.error("Request error:", error.message);
+  console.error("[request] Error:", error.message);
 
   const statusCode =
     error instanceof multer.MulterError
